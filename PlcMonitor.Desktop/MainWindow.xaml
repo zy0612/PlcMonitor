@@ -1,0 +1,139 @@
+﻿<!-- 
+    MainWindow.xaml
+    整体布局：顶部标题 + 下方左右两栏
+    左栏：4台设备卡片（2x2排列）
+    右栏：ScottPlot 历史曲线（阶段6新增）
+-->
+<Window x:Class="PlcMonitor.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PlcMonitor.Desktop"
+        xmlns:wpf="clr-namespace:ScottPlot;assembly=ScottPlot.WPF"
+        mc:Ignorable="d"
+        Loaded="Window_Loaded"
+        Title="PLC 数据采集与远程监控系统" Height="650" Width="1100">
+
+    <!-- 根级 Grid：第0行放标题，第1行放主内容区 -->
+    <Grid>
+        <!-- 定义两行：第0行高度自适应（标题），第1行占满剩余空间（主区） -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 顶部：标题 + 导出按钮（横向排列） -->
+        <DockPanel Grid.Row="0" LastChildFill="False" Margin="10">
+            <!-- 横向容器：左放标题，右放按钮 -->
+            <TextBlock DockPanel.Dock="Left" Text="PLC 数据采集与远程监控系统" FontSize="24"/>
+            <!-- 标题靠左停靠 -->
+            <Button DockPanel.Dock="Right" x:Name="BtnExport" Content="导出 Excel" Width="100" Height="32" Click="BtnExport_Click"/>
+            <!-- ★ 导出按钮靠右，名字叫 BtnExport -->
+        </DockPanel>
+
+
+        <!-- 主区 Grid：左右两栏，左卡片右曲线 -->
+        <Grid Grid.Row="1">
+            <!-- 定义两列：左列固定400，右列占剩余 -->
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="400"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左栏：设备卡片区 -->
+            <Border Grid.Column="0" Background="#F0F0F0" Margin="10">
+                <!-- ItemsControl：把 ViewModel.Tags 集合渲染成一组卡片 -->
+                <ItemsControl ItemsSource="{Binding Tags}">
+                    <!-- 卡片面板：UniformGrid 排成 2 列（左栏窄，2x2 比 4 列更清楚） -->
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="2"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <!-- 单张卡片的数据模板 -->
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <!-- 卡片外框：圆角白底 -->
+                            <Border Background="White" CornerRadius="8" Padding="15" Margin="10" Height="120">
+                                <!-- 卡片边框样式：正常灰色，报警时变红加粗 -->
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="Gray"/>
+                                        <Setter Property="BorderThickness" Value="2"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAlarm}" Value="true">
+                                                <Setter Property="BorderBrush" Value="red"/>
+                                                <Setter Property="BorderThickness" Value="3"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <!-- 卡片内容竖直排列 -->
+                                <StackPanel>
+                                    <!-- 第一行：设备名 + 状态灯 + 运行/停机文字 -->
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold"/>
+                                        <!-- 状态指示灯：运行绿，停机红 -->
+                                        <Ellipse Width="12" Height="12" Margin="10,0,0,0">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="Green"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsRunning}" Value="False">
+                                                            <Setter Property="Fill" Value="Red"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <!-- 运行状态文字 -->
+                                        <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="Gray">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="运行中"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsRunning}" Value="False">
+                                                            <Setter Property="Text" Value="已停机"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <!-- "温度"标签 -->
+                                    <TextBlock Text="温度" Margin="0,10,0,0" Foreground="Gray"/>
+                                    <!-- 温度数值 + 单位 -->
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Value,StringFormat={}{0:F1}}" FontSize="28" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Unit}" FontSize="16" Foreground="Gray" Margin="4,0,0,0" VerticalAlignment="Bottom"/>
+                                    </StackPanel>
+                                    <!-- 报警文字：默认隐藏，报警时显示 -->
+                                    <TextBlock Text="⚠ 温度超限！" Foreground="Red" FontWeight="Bold" FontSize="14" Margin="0,8,0,0" HorizontalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAlarm}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+
+            <!-- 右栏：历史曲线区 -->
+            <Border Grid.Column="1" Background="#F0F0F0" Margin="10">
+                <!-- WpfPlot 曲线控件，x:Name 为 HistoryPlot，后台代码靠这个名字往里画线 -->
+                <wpf:WpfPlot x:Name="HistoryPlot" Margin="5"/>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

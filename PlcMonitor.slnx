@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="PlcMonitor.Desktop/PlcMonitor.Desktop.csproj" Id="0de9611b-bfac-4cc3-a8e3-25407c60f885" />
+  <Project Path="PlcSlaveSimulator/PlcSlaveSimulator.csproj" Id="fc864d6f-563e-4359-baba-e10ee2017e18" />
+</Solution>
